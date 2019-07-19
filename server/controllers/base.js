@@ -80,7 +80,7 @@ class baseController {
       //   }
       //   return (this.$tokenAuth = true);
       // }
-      
+
       let checkId = await this.getProjectIdByToken(token);
       if(!checkId){
         ctx.body = yapi.commons.resReturn(null, 42014, 'token 无效');
@@ -102,7 +102,7 @@ class baseController {
           let userInst = yapi.getInst(userModel); //创建user实体
           result = await userInst.findById(tokenUid);
         }
-        
+
         this.$user = result;
         this.$auth = true;
       }
@@ -153,7 +153,7 @@ class baseController {
       return false;
     }
   }
-  
+
   async checkRegister() {
     // console.log('config', yapi.WEBCONFIG);
     if (yapi.WEBCONFIG.closeRegister) {
@@ -285,6 +285,64 @@ class baseController {
       return false;
     }
   }
+
+  //filter list by auth
+  async filterByAuth(list, type) {
+
+    if (type === "interface") {
+      if (list && list.length > 0) {
+        let filteredList = [];
+        for (let i = 0; i < list.length; i++) {
+          let inter = list[i].toObject();
+
+          if ((await this.checkAuth(inter._id, 'interface', 'view')) !== true) {
+            continue;
+          }
+          filteredList.push(inter);
+        }
+        return filteredList;
+      }
+    } else if (type === "project") {
+      if (list && list.length > 0) {
+        let filteredList = [];
+        for (let i = 0; i < list.length; i++) {
+          let project = list[i].toObject();
+
+          if (project.project_type === 'private') {
+            if ((await this.checkAuth(project._id, 'project', 'view')) !== true) {
+              continue;
+            }
+          }
+          filteredList.push(project);
+        }
+        return filteredList;
+      }
+    } else if (type === "group") {
+      if (list && list.length > 0) {
+        let filteredList = [];
+        for (let i = 0; i < list.length; i++) {
+          let group = list[i].toObject();
+
+          //private group
+          if (group.type === 'private') {
+            if (group.uid === this.getUid()) {
+              filteredList.push(group);
+            }
+            continue;
+          }
+
+          if ((await this.checkAuth(group._id, 'group', 'view')) !== true) {
+            continue;
+          }
+
+          filteredList.push(group);
+        }
+        return filteredList;
+      }
+    }
+    return list;
+  }
+
   /**
    * 身份验证
    * @param {*} id type对应的id
